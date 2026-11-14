@@ -1,7 +1,8 @@
 import { icon, esc } from './ui.js';
+import * as Ledger from './ledger.js';
 
 const TABS = [
-  { id: 'ledger', label: '가계부', icon: 'wallet' },
+  { id: 'ledger', label: '가계부', icon: 'wallet', mod: Ledger },
   { id: 'schedule', label: '일정', icon: 'calendar' },
   { id: 'record', label: '기록', icon: 'book' },
 ];
@@ -41,6 +42,13 @@ let start = TABS[0].id;
 try { start = localStorage.getItem('tab') || TABS[0].id; } catch { /* 무시 */ }
 show(start);
 
+// PC 미리보기(Live Server 등)에서는 오프라인 캐시를 끔 → 수정한 내용이 바로 보이게
+const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  if (isLocal) {
+    navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+    if (window.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+  } else {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
 }

@@ -15,7 +15,7 @@ async function buildBackup() {
   for (const s of STORES) {
     const rows = await DB.all(s);
     out.stores[s] = s === 'photos'
-      ? await Promise.all(rows.map(async (r) => ({ id: r.id, data: await blobToDataURL(r.blob) })))
+      ? await Promise.all(rows.map(async ({ blob, ...rest }) => ({ ...rest, data: await blobToDataURL(blob) })))
       : rows;
   }
   const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
@@ -35,8 +35,8 @@ export async function exportToShare() {
 export async function importFromFile(file) {
   const json = JSON.parse(await file.text());
   if (json.app !== 'fromis-app' || !json.stores) throw new Error('덕질노트 백업 파일이 아니에요.');
-  const photos = await Promise.all((json.stores.photos || []).map(async (p) => ({
-    id: p.id, blob: await (await fetch(p.data)).blob(),
+  const photos = await Promise.all((json.stores.photos || []).map(async ({ data, ...rest }) => ({
+    ...rest, blob: await (await fetch(data)).blob(),
   })));
   for (const s of STORES) {
     await DB.replaceAll(s, s === 'photos' ? photos : (json.stores[s] || []));

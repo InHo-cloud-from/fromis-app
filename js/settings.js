@@ -1,6 +1,8 @@
 import { DB } from './db.js';
-import { openSheet, confirmSheet, toast, icon, esc, canShareFiles } from './ui.js';
+import { openSheet, confirmSheet, toast, icon, esc, canShareFiles, today } from './ui.js';
 import { notifyChange } from './data.js';
+import { openListManager, openBudgetEditor } from './ledger-settings.js';
+import { openBannerManager, openMemberPhotoManager } from './decor-settings.js';
 import { exportToFile, exportToShare, importFromFile } from './backup.js';
 
 const fmtDate = (iso) => {
@@ -34,17 +36,35 @@ export async function openSettings() {
           <button type="button" class="btn" data-act="import">${icon('upload')} 백업 파일 불러오기</button>
           <input type="file" accept="application/json,.json" hidden data-file>
         </div>
+      </section>
+      <section class="set-group">
+        <h3>꾸미기</h3>
+        <button type="button" class="set-row" data-act="banners"><span>사진 · 첫 화면 모양</span>${icon('chevron')}</button>
+        <button type="button" class="set-row" data-act="members"><span>멤버 프로필 사진</span>${icon('chevron')}</button>
+      </section>
+      <section class="set-group">
+        <h3>가계부</h3>
+        <button type="button" class="set-row" data-act="budget"><span>예산</span>${icon('chevron')}</button>
+        <button type="button" class="set-row" data-list="cats"><span>지출 분류</span>${icon('chevron')}</button>
+        <button type="button" class="set-row" data-list="subs"><span>덕질 항목</span>${icon('chevron')}</button>
+        <button type="button" class="set-row" data-list="pays"><span>결제수단</span>${icon('chevron')}</button>
+        <button type="button" class="set-row" data-list="incomeKinds"><span>수입 구분</span>${icon('chevron')}</button>
       </section>`;
   }
   await render();
 
   box.addEventListener('click', async (e) => {
+    const li = e.target.closest('[data-list]');
+    if (li) { openListManager(li.dataset.list); return; }
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const act = b.dataset.act;
     if (act === 'export') { await exportToFile(); toast('백업 파일을 저장했어요'); render(); }
     if (act === 'share') { if (await exportToShare()) render(); }
     if (act === 'import') box.querySelector('[data-file]').click();
+    if (act === 'budget') openBudgetEditor(today().slice(0, 7));
+    if (act === 'banners') openBannerManager();
+    if (act === 'members') openMemberPhotoManager();
   });
 
   box.addEventListener('change', async (e) => {

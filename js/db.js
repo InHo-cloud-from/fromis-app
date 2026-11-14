@@ -1,8 +1,8 @@
 // IndexedDB 래퍼: 모든 데이터(사진 포함)는 폰 브라우저 안에만 저장됩니다.
 const NAME = 'fromis-app';
-const VER = 1;
-export const STORES = ['photos', 'meta'];
-const KEYS = { photos: 'id', meta: 'key' };
+const VER = 2;
+export const STORES = ['photos', 'meta', 'tx'];
+const KEYS = { photos: 'id', meta: 'key', tx: 'id' };
 
 let dbp;
 function open() {
