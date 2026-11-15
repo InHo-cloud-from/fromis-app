@@ -9,6 +9,7 @@ import * as P from './photos.js';
 import { avatarHTML, openBannerManager } from './decor-settings.js';
 import * as R from './ledger-rec.js';
 import { manageHTML, recSummaryHTML, openRuleForm, openPayslipForm } from './ledger-manage.js';
+import * as F from './ledger-fandom.js';
 
 let mphotos = {}; // 멤버 프로필 사진 (render 때 갱신)
 
@@ -40,12 +41,12 @@ export function unmount() {
 
 async function load() {
   await R.runRules(); // 정한 날 지난 고정지출·할부·적금을 내역으로
-  const [allTx, rules, payslips] = await Promise.all([DB.all('tx'), R.getRules(), R.getPayslips()]);
+  const [allTx, rules, payslips, applies, wishes] = await Promise.all([DB.all('tx'), R.getRules(), R.getPayslips(), F.getApplies(), F.getWishes()]);
   const [txs, cats, subs, pays, kinds, bstore, banner, mphotos, layout, fit] = await Promise.all([
     L.txOfMonth(state.ym), L.getList('cats'), L.getList('subs'), L.getList('pays'), L.getList('incomeKinds'), L.getBudgetStore(),
     P.pickBanner(), P.memberPhotos(), P.getLayout(), P.getFit(),
   ]);
-  return { txs, allTx, rules, payslips, cats, subs, pays, kinds, banner, mphotos, layout, fit, budget: L.budgetFor(bstore, state.ym) };
+  return { txs, allTx, rules, payslips, applies, wishes, cats, subs, pays, kinds, banner, mphotos, layout, fit, budget: L.budgetFor(bstore, state.ym) };
 }
 
 // 상단: 배너 사진이 있으면 사진 위에 이번 달 남은 예산, 없으면 기본 제목
@@ -124,6 +125,7 @@ async function render() {
   mphotos = d.mphotos;
   box.className = `ledger layout-${d.banner ? d.layout : 'plain'}${P.isWide(d.banner) ? ' photo-wide' : ''}`;
   const isThisMonth = state.ym === today().slice(0, 7);
+  fixView();
   box.innerHTML = `
     ${headHTML(d)}
     <div class="ledger-bar">
@@ -137,7 +139,9 @@ async function render() {
         <div class="seg seg-sm" role="group" aria-label="보기">
           <button type="button" data-view="summary" aria-pressed="${state.view === 'summary'}">요약</button>
           <button type="button" data-view="list" aria-pressed="${state.view === 'list'}">내역</button>
-          <button type="button" data-view="manage" aria-pressed="${state.view === 'manage'}">관리</button>
+          ${state.scope === 'fandom'
+    ? `<button type="button" data-view="fandom" aria-pressed="${state.view === 'fandom'}">응모·위시</button>`
+    : `<button type="button" data-view="manage" aria-pressed="${state.view === 'manage'}">관리</button>`}
         </div>
         <div class="seg seg-sm" role="group" aria-label="범위">
           <button type="button" data-scope="all" aria-pressed="${state.scope === 'all'}">전체</button>
@@ -145,7 +149,7 @@ async function render() {
         </div>
       </div>
     </div>
-    <div class="ledger-body">${state.view === 'summary' ? summaryHTML(d) : state.view === 'manage' ? manageHTML(d, state.ym) : listHTML(d)}</div>
+    <div class="ledger-body">${bodyHTML(d)}</div>
     <button type="button" class="fab" data-act="add" aria-label="내역 추가">${icon('plus')}</button>`;
 
   // 크기 정보가 없는 예전 사진: 불러온 뒤 가로/세로 판단해서 저장
@@ -160,6 +164,21 @@ async function render() {
       box?.classList.toggle('photo-wide', P.isWide(b));
     }, { once: true });
   }
+}
+
+// '관리'는 전체 보기에만, '응모·위시'는 덕질만 보기에만 → 범위를 바꾸면 짝이 되는 탭으로
+function fixView() {
+  if (state.view === 'manage' && state.scope === 'fandom') state.view = 'fandom';
+  else if (state.view === 'fandom' && state.scope !== 'fandom') state.view = 'manage';
+}
+
+function bodyHTML(d) {
+  if (state.view === 'manage') return manageHTML(d, state.ym);
+  if (state.view === 'fandom') {
+    return F.fandomHTML({ ...d, budget: d.budget.cats?.[L.FANDOM], fandomSpent: L.summarize(d.txs, d.pays).fandom });
+  }
+  if (state.view === 'list') return listHTML(d);
+  return summaryHTML(d);
 }
 
 /* ---------- 요약 ---------- */
@@ -182,7 +201,7 @@ function rowsHTML(items) {
     </li>`).join('')}</ul>`;
 }
 
-function summaryHTML({ txs, allTx, rules, cats, subs, pays, budget }) {
+function summaryHTML({ txs, allTx, rules, cats, subs, pays, budget, applies, wishes }) {
   const s = L.summarize(txs, pays);
   const b = budget.cats || {};
   const budgetBtn = `<button type="button" class="btn-link" data-act="budget">${icon('gear')} 예산${budget.custom ? ' (이번 달만)' : ''}</button>`;
@@ -209,6 +228,7 @@ function summaryHTML({ txs, allTx, rules, cats, subs, pays, budget }) {
           <div class="panel-head"><h3>멤버별 지출</h3></div>
           ${memberBars(s.byMember)}
         </section>
+        ${F.fandomMiniHTML({ applies, wishes })}
         <section class="panel span-2">
           <div class="panel-head"><h3>항목별</h3></div>
           ${rowsHTML(shown)}
@@ -302,7 +322,7 @@ function txRow(t, { cats, subs, pays, kinds }) {
     meta = [t.cat === L.FANDOM ? ['덕질', L.nameOf(subs, t.sub)].filter(Boolean).join(' · ') : cat, t.member, pay, t.memo].filter(Boolean);
     amt = `−${L.won(t.amount)}`; cls = t.cat === L.FANDOM ? 'expense fandom' : 'expense';
   }
-  const tag = t.rec?.payslip ? '명세서' : t.rec?.id ? '자동' : '';
+  const tag = t.rec?.payslip ? '명세서' : t.rec?.apply ? '응모' : t.rec?.id ? '자동' : '';
   return `<li><button type="button" class="tx-row" data-edit="${esc(t.id)}">
     <span class="tx-dot ${cls}" aria-hidden="true"></span>
     <span class="tx-main"><b>${tag ? `<span class="tx-tag">${tag}</span>` : ''}${esc(title)}</b><small>${esc(meta.join(' · '))}</small></span>
@@ -320,9 +340,22 @@ async function onClick(e) {
   if (ed) {
     const t = await DB.get('tx', ed.dataset.edit);
     if (t?.rec?.payslip) openPayslipForm(t.rec.payslip); // 명세서로 만든 급여는 명세서에서 고침
+    else if (t?.rec?.apply) F.openApplyForm(t.rec.apply); // 응모 지출은 응모 기록에서 고침
     else if (t) openTxForm(t);
     return;
   }
+  if (e.target.closest('[data-addapply]')) { F.openApplyForm(null); return; }
+  const ap = e.target.closest('[data-apply]');
+  if (ap) { F.openApplyForm(ap.dataset.apply); return; }
+  if (e.target.closest('[data-addwish]')) { F.openWishForm(null); return; }
+  const bo = e.target.closest('[data-bought]');
+  if (bo) {
+    const w = (await F.getWishes()).find((x) => x.id === bo.dataset.bought);
+    if (w) openTxForm(null, { prefill: F.wishToPrefill(w), onSaved: (tx) => F.markWishBought(w.id, tx), title: `'${w.name}' 샀어요` });
+    return;
+  }
+  const wi = e.target.closest('[data-wish]');
+  if (wi) { F.openWishForm(wi.dataset.wish); return; }
   const ar = e.target.closest('[data-addrule]');
   if (ar) { openRuleForm(ar.dataset.addrule, null); return; }
   const ru = e.target.closest('[data-rule]');
@@ -350,25 +383,28 @@ function defaultDate() {
 }
 const lastPay = () => { try { return localStorage.getItem('ledger.lastPay'); } catch { return null; } };
 
-async function openTxForm(tx) {
+// opts.prefill: 새 내역에 미리 채울 값 (위시 '샀어요'), opts.onSaved(tx): 저장 후 할 일
+async function openTxForm(tx, opts = {}) {
   const [cats, subs, pays, kinds] = await Promise.all([L.getList('cats'), L.getList('subs'), L.getList('pays'), L.getList('incomeKinds')]);
   const isNew = !tx;
   const f = tx ? { ...tx } : {
-    id: uid(), type: 'expense', date: defaultDate(), amount: 0,
+    id: uid(), type: 'expense', date: today(), amount: 0,
     cat: state.scope === 'fandom' ? L.FANDOM : null, sub: null, member: null, place: '', memo: '',
     pay: lastPay() || L.visible(pays)[0]?.id || null, kind: L.visible(kinds)[0]?.id || null,
     card: L.visible(pays).find((p) => p.card)?.id || null,
+    ...(opts.prefill || {}),
   };
+  if (!tx && !opts.prefill) f.date = defaultDate();
 
   const s = openSheet({
-    title: isNew ? '내역 추가' : '내역 수정',
+    title: opts.title || (isNew ? '내역 추가' : '내역 수정'),
     body: '<form class="form tx-form" novalidate></form>',
     footer: `${isNew ? '' : `<button type="button" class="btn btn-danger-ghost" data-act="del">${icon('trash')} 삭제</button>`}<button type="button" class="btn btn-primary" data-act="save">저장</button>`,
   });
   const form = s.body.firstElementChild;
 
   // 숨긴 항목이라도 이 내역이 쓰고 있으면 보이게
-  const opts = (list, cur) => list.filter((x) => !x.hidden || x.id === cur);
+  const shown = (list, cur) => list.filter((x) => !x.hidden || x.id === cur);
   const chips = (key, list, cur, { none } = {}) => `<div class="chips wrap" role="group">
     ${none ? `<button type="button" class="chip chip-sm" data-pick="${key}" data-v="" aria-pressed="${!cur}">${esc(none)}</button>` : ''}
     ${list.map((x) => `<button type="button" class="chip chip-sm" data-pick="${key}" data-v="${esc(x.id)}" aria-pressed="${x.id === cur}">${esc(x.name)}</button>`).join('')}
@@ -376,7 +412,7 @@ async function openTxForm(tx) {
 
   function draw() {
     const t = f.type;
-    const cardList = opts(pays, f.card).filter((p) => p.card);
+    const cardList = shown(pays, f.card).filter((p) => p.card);
     form.innerHTML = `
       ${isNew ? `<div class="seg" role="group" aria-label="종류">${Object.entries(TYPES).map(([k, n]) => `<button type="button" data-type="${k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>` : `<p class="hint">${TYPES[t]}</p>`}
       <div class="field-row">
@@ -384,18 +420,18 @@ async function openTxForm(tx) {
         <div class="field"><label for="tx-date">날짜</label><input id="tx-date" type="date" value="${esc(f.date)}"></div>
       </div>
       ${t === 'expense' ? `
-        <div class="field"><span class="label">분류</span>${chips('cat', opts(cats, f.cat), f.cat)}</div>
+        <div class="field"><span class="label">분류</span>${chips('cat', shown(cats, f.cat), f.cat)}</div>
         ${f.cat === L.FANDOM ? `
-          <div class="field sub-field"><span class="label">덕질 항목</span>${chips('sub', opts(subs, f.sub), f.sub)}</div>
+          <div class="field sub-field"><span class="label">덕질 항목</span>${chips('sub', shown(subs, f.sub), f.sub)}</div>
           <div class="field sub-field"><span class="label">멤버 <small>선택</small></span>
             <div class="chips wrap" role="group">
               <button type="button" class="chip chip-sm" data-pick="member" data-v="" aria-pressed="${!f.member}">없음</button>
               ${MEMBERS.map((m) => `<button type="button" class="chip chip-sm chip-avatar" data-pick="member" data-v="${esc(m)}" aria-pressed="${f.member === m}">${avatarHTML(m, mphotos[m], 'sm')}${esc(m)}</button>`).join('')}
             </div></div>` : ''}
         <div class="field"><label for="tx-place">사용처 · 내용</label><input id="tx-place" value="${esc(f.place)}" placeholder="예: 세븐일레븐, 응원봉"></div>
-        <div class="field"><span class="label">결제수단</span>${chips('pay', opts(pays, f.pay), f.pay)}</div>` : ''}
+        <div class="field"><span class="label">결제수단</span>${chips('pay', shown(pays, f.pay), f.pay)}</div>` : ''}
       ${t === 'income' ? `
-        <div class="field"><span class="label">구분</span>${chips('kind', opts(kinds, f.kind), f.kind)}</div>
+        <div class="field"><span class="label">구분</span>${chips('kind', shown(kinds, f.kind), f.kind)}</div>
         <div class="field"><label for="tx-place">출처</label><input id="tx-place" value="${esc(f.place)}" placeholder="예: 회사 11월 급여"></div>` : ''}
       ${t === 'cardpay' ? `
         <p class="hint">카드로 쓴 돈은 쓴 날 이미 지출로 잡혀요. 카드값 납부는 지출 합계에 넣지 않고 '현금 흐름'에서만 빠져요.</p>
@@ -449,8 +485,9 @@ async function openTxForm(tx) {
     await DB.put('tx', out);
     requestPersist();
     if (out.type === 'expense' && out.pay) { try { localStorage.setItem('ledger.lastPay', out.pay); } catch { /* 무시 */ } }
+    if (opts.onSaved) await opts.onSaved(out);
     await s.close();
-    toast(isNew ? '저장했어요' : '수정했어요');
+    toast(opts.onSaved ? '지출에 넣었어요' : isNew ? '저장했어요' : '수정했어요');
     if (L.ymOf(out.date) !== state.ym) state.ym = L.ymOf(out.date);
     render();
   });
