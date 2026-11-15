@@ -8,6 +8,8 @@ const LIST_INFO = {
   subs: { title: '덕질 항목', note: '분류에서 \'덕질\'을 고르면 나오는 세부 항목이에요.', ph: '새 항목 (예: 생일카페)' },
   pays: { title: '결제수단', note: '\'카드\'로 표시한 수단으로 쓴 돈은 현금 흐름에서 빠지고, 카드값 납부할 때 고를 수 있어요. 카드가 여러 장이면 각각 추가해 두세요 (예: 현대카드).', ph: '새 결제수단', card: true },
   incomeKinds: { title: '수입 구분', note: '수입을 입력할 때 고르는 구분이에요.', ph: '새 구분 (예: 중고판매)' },
+  payItems: { title: '월급명세서 지급 항목', note: '월급명세서에 나오는 지급 항목이에요. 빼도 예전 명세서 값은 남아요.', ph: '새 지급 항목' },
+  deductItems: { title: '월급명세서 공제 항목', note: '월급명세서에 나오는 공제 항목이에요. 빼도 예전 명세서 값은 남아요.', ph: '새 공제 항목' },
 };
 
 export async function openListManager(name) {

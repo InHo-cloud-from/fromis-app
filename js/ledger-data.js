@@ -26,7 +26,13 @@ const DEFAULT_INCOME_KINDS = [
   ['i-salary', '급여'], ['i-bonus', '상여'], ['i-side', '부수입'], ['i-allow', '용돈'], ['i-refund', '환급'], ['i-etc', '기타'],
 ].map(([id, name]) => ({ id, name }));
 
-const LISTS = { cats: DEFAULT_CATS, subs: DEFAULT_SUBS, pays: DEFAULT_PAYS, incomeKinds: DEFAULT_INCOME_KINDS };
+// 월급명세서 항목 (쓰던 시트의 항목 이름)
+const PAY_ITEMS = ['기본급', '연장근로수당', '휴일근로수당', '연차수당', '야간수당', '휴일수당', '식대수당', '차량유지비', '통근수당', '기타수당', '상여금', '명절상여금', '근속수당', '성과급', '기타수당(부정기)']
+  .map((name, i) => ({ id: `pi-${i}`, name }));
+const DEDUCT_ITEMS = ['근로소득세', '지방소득세', '고용보험', '건강보험', '장기요양보험', '국민연금', '연말정산소득세', '연말정산지방소득세', '가불금', '인터넷요금', '숙소관리비', '미수금']
+  .map((name, i) => ({ id: `di-${i}`, name }));
+
+const LISTS = { cats: DEFAULT_CATS, subs: DEFAULT_SUBS, pays: DEFAULT_PAYS, incomeKinds: DEFAULT_INCOME_KINDS, payItems: PAY_ITEMS, deductItems: DEDUCT_ITEMS };
 
 // 목록은 meta 'ledger.<이름>' 에 저장. 삭제는 hidden 표시만 (예전 내역의 이름이 남도록)
 export async function getList(name) {

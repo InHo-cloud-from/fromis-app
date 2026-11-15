@@ -7,6 +7,8 @@ import { openSettings } from './settings.js';
 import { openBudgetEditor } from './ledger-settings.js';
 import * as P from './photos.js';
 import { avatarHTML, openBannerManager } from './decor-settings.js';
+import * as R from './ledger-rec.js';
+import { manageHTML, recSummaryHTML, openRuleForm, openPayslipForm } from './ledger-manage.js';
 
 let mphotos = {}; // 멤버 프로필 사진 (render 때 갱신)
 
@@ -37,11 +39,13 @@ export function unmount() {
 }
 
 async function load() {
+  await R.runRules(); // 정한 날 지난 고정지출·할부·적금을 내역으로
+  const [allTx, rules, payslips] = await Promise.all([DB.all('tx'), R.getRules(), R.getPayslips()]);
   const [txs, cats, subs, pays, kinds, bstore, banner, mphotos, layout, fit] = await Promise.all([
     L.txOfMonth(state.ym), L.getList('cats'), L.getList('subs'), L.getList('pays'), L.getList('incomeKinds'), L.getBudgetStore(),
     P.pickBanner(), P.memberPhotos(), P.getLayout(), P.getFit(),
   ]);
-  return { txs, cats, subs, pays, kinds, banner, mphotos, layout, fit, budget: L.budgetFor(bstore, state.ym) };
+  return { txs, allTx, rules, payslips, cats, subs, pays, kinds, banner, mphotos, layout, fit, budget: L.budgetFor(bstore, state.ym) };
 }
 
 // 상단: 배너 사진이 있으면 사진 위에 이번 달 남은 예산, 없으면 기본 제목
@@ -133,6 +137,7 @@ async function render() {
         <div class="seg seg-sm" role="group" aria-label="보기">
           <button type="button" data-view="summary" aria-pressed="${state.view === 'summary'}">요약</button>
           <button type="button" data-view="list" aria-pressed="${state.view === 'list'}">내역</button>
+          <button type="button" data-view="manage" aria-pressed="${state.view === 'manage'}">관리</button>
         </div>
         <div class="seg seg-sm" role="group" aria-label="범위">
           <button type="button" data-scope="all" aria-pressed="${state.scope === 'all'}">전체</button>
@@ -140,7 +145,7 @@ async function render() {
         </div>
       </div>
     </div>
-    <div class="ledger-body">${state.view === 'summary' ? summaryHTML(d) : listHTML(d)}</div>
+    <div class="ledger-body">${state.view === 'summary' ? summaryHTML(d) : state.view === 'manage' ? manageHTML(d, state.ym) : listHTML(d)}</div>
     <button type="button" class="fab" data-act="add" aria-label="내역 추가">${icon('plus')}</button>`;
 
   // 크기 정보가 없는 예전 사진: 불러온 뒤 가로/세로 판단해서 저장
@@ -177,7 +182,7 @@ function rowsHTML(items) {
     </li>`).join('')}</ul>`;
 }
 
-function summaryHTML({ txs, cats, subs, pays, budget }) {
+function summaryHTML({ txs, allTx, rules, cats, subs, pays, budget }) {
   const s = L.summarize(txs, pays);
   const b = budget.cats || {};
   const budgetBtn = `<button type="button" class="btn-link" data-act="budget">${icon('gear')} 예산${budget.custom ? ' (이번 달만)' : ''}</button>`;
@@ -238,6 +243,7 @@ function summaryHTML({ txs, cats, subs, pays, budget }) {
           <dt class="ref">이번 달 카드 사용 (청구 전)</dt><dd class="ref">${L.won(s.cardUse)}</dd>
         </dl>
       </section>
+      ${recSummaryHTML({ rules, txs, allTx })}
       <section class="panel span-2">
         <div class="panel-head"><h3>분류별 지출</h3></div>
         ${rowsHTML(catItems)}
@@ -296,9 +302,10 @@ function txRow(t, { cats, subs, pays, kinds }) {
     meta = [t.cat === L.FANDOM ? ['덕질', L.nameOf(subs, t.sub)].filter(Boolean).join(' · ') : cat, t.member, pay, t.memo].filter(Boolean);
     amt = `−${L.won(t.amount)}`; cls = t.cat === L.FANDOM ? 'expense fandom' : 'expense';
   }
+  const tag = t.rec?.payslip ? '명세서' : t.rec?.id ? '자동' : '';
   return `<li><button type="button" class="tx-row" data-edit="${esc(t.id)}">
     <span class="tx-dot ${cls}" aria-hidden="true"></span>
-    <span class="tx-main"><b>${esc(title)}</b><small>${esc(meta.join(' · '))}</small></span>
+    <span class="tx-main"><b>${tag ? `<span class="tx-tag">${tag}</span>` : ''}${esc(title)}</b><small>${esc(meta.join(' · '))}</small></span>
     <span class="tx-amt ${cls}">${esc(amt)}</span>
   </button></li>`;
 }
@@ -310,7 +317,18 @@ async function onClick(e) {
   const sc = e.target.closest('[data-scope]');
   if (sc) { state.scope = sc.dataset.scope; remember(); render(); return; }
   const ed = e.target.closest('[data-edit]');
-  if (ed) { const t = await DB.get('tx', ed.dataset.edit); if (t) openTxForm(t); return; }
+  if (ed) {
+    const t = await DB.get('tx', ed.dataset.edit);
+    if (t?.rec?.payslip) openPayslipForm(t.rec.payslip); // 명세서로 만든 급여는 명세서에서 고침
+    else if (t) openTxForm(t);
+    return;
+  }
+  const ar = e.target.closest('[data-addrule]');
+  if (ar) { openRuleForm(ar.dataset.addrule, null); return; }
+  const ru = e.target.closest('[data-rule]');
+  if (ru) { const r = (await R.getRules()).find((x) => x.id === ru.dataset.rule); if (r) openRuleForm(r.kind, r); return; }
+  const ps = e.target.closest('[data-payslip]');
+  if (ps) { openPayslipForm(ps.dataset.payslip); return; }
   const a = e.target.closest('[data-act]');
   if (!a) return;
   const act = a.dataset.act;
@@ -414,6 +432,7 @@ async function openTxForm(tx) {
     if (b.dataset.act === 'del') {
       if (!(await confirmSheet('이 내역을 삭제할까요?', { ok: '삭제', danger: true }))) return;
       await DB.del('tx', f.id);
+      if (f.rec?.id) await R.skipRuleMonth(f.rec); // 자동 내역을 지우면 그 달은 다시 안 만듦
       await s.close();
       toast('삭제했어요');
       render();
@@ -426,6 +445,7 @@ async function openTxForm(tx) {
     const keep = { expense: ['cat', 'sub', 'member', 'place', 'pay'], income: ['kind', 'place'], cardpay: ['card'] }[f.type];
     const out = { id: f.id, type: f.type, date: f.date, amount: f.amount, memo: f.memo.trim(), createdAt: f.createdAt || Date.now(), updatedAt: Date.now() };
     for (const k of keep) out[k] = typeof f[k] === 'string' ? f[k].trim() || null : f[k] ?? null;
+    if (f.rec) out.rec = f.rec; // 자동 내역 표시 유지 (안 그러면 같은 달에 또 만들어짐)
     await DB.put('tx', out);
     requestPersist();
     if (out.type === 'expense' && out.pay) { try { localStorage.setItem('ledger.lastPay', out.pay); } catch { /* 무시 */ } }
