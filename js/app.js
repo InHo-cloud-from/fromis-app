@@ -60,3 +60,28 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
 }
+
+// 기기 동기화 (구글 드라이브): 켜져 있으면 자동으로, 로그인이 만료되면 위쪽에 '눌러서 동기화' 버튼
+import('./sync.js').then((S) => {
+  const pill = document.createElement('button');
+  pill.type = 'button';
+  pill.className = 'sync-pill';
+  pill.hidden = true;
+  document.body.append(pill);
+  const draw = () => {
+    const st = S.status;
+    if (!S.enabled()) { pill.hidden = true; return; }
+    if (st.busy) { pill.hidden = false; pill.disabled = true; pill.textContent = `☁ 동기화 중${st.progress ? ' · ' + st.progress : ''}`; return; }
+    pill.disabled = false;
+    if (st.needLogin) { pill.hidden = false; pill.textContent = '☁ 눌러서 동기화'; return; }
+    if (st.error) { pill.hidden = false; pill.textContent = '☁ 동기화 실패 · 다시'; return; }
+    pill.hidden = true;
+  };
+  pill.addEventListener('click', async () => {
+    try { await (S.status.needLogin ? S.loginAndSync() : S.syncNow()); } catch (e) { S.status.error = e.message; }
+    draw();
+  });
+  window.addEventListener('sync-status', draw);
+  S.start();
+  draw();
+}).catch(() => {});

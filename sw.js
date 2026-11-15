@@ -1,6 +1,6 @@
 // 서비스워커: 앱 파일을 폰에 저장해 오프라인에서도 열리게 함.
 // 파일을 수정하면 VERSION 숫자를 올려야 폰에 새 버전이 반영됩니다.
-const VERSION = 'v9';
+const VERSION = 'v10';
 const CACHE = `fromis-app-${VERSION}`;
 const ASSETS = [
   './',
@@ -26,6 +26,9 @@ const ASSETS = [
   './js/record.js',
   './js/record-data.js',
   './js/albums-data.js',
+  './js/sync.js',
+  './js/gdrive.js',
+  './js/sync-config.js',
   './js/backup.js',
   './icons/icon-192.png',
   './icons/icon-512.png',

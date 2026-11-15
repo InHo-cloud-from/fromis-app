@@ -6,6 +6,8 @@ import { openListManager, openBudgetEditor } from './ledger-settings.js';
 import { openBannerManager, openMemberPhotoManager } from './decor-settings.js';
 import { exportToFile, exportToShare, importFromFile } from './backup.js';
 import * as WL from './wallpaper-link.js';
+import * as SY from './sync.js';
+import * as G from './gdrive.js';
 
 const fmtDate = (iso) => {
   if (!iso) return '아직 없음';
@@ -13,6 +15,7 @@ const fmtDate = (iso) => {
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 };
 const fmtMB = (b) => `${(b / 1024 / 1024).toFixed(1)}MB`;
+const fmtTime = (iso) => { const d = new Date(iso); return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
 export async function openSettings() {
   const s = openSheet({ title: '설정', body: '<div class="settings"></div>' });
@@ -28,7 +31,24 @@ export async function openSettings() {
       storage = `${fmtMB(est.usage || 0)} 사용 중 · ${persisted ? '영구 보존 켜짐' : '영구 보존 꺼짐'}`;
     } catch { storage = '확인 불가'; }
 
+    const st = SY.status;
+    const syncHTML = !G.configured()
+      ? '<p class="set-note">구글 연결 설정을 준비하는 중이에요.</p>'
+      : !SY.enabled()
+        ? `<p class="set-note">구글 드라이브의 숨김 폴더(이 앱만 볼 수 있는 곳)에 데이터를 올려서 폰과 PC를 같은 내용으로 맞춰요. 두 기기에서 따로 넣은 내역은 합쳐져요.</p>
+          <div class="btn-col"><button type="button" class="btn btn-primary" data-act="sync-on">구글 드라이브 연결</button></div>`
+        : `<dl class="set-meta"><dt>상태</dt><dd>${st.busy ? `동기화 중${st.progress ? ' · ' + esc(st.progress) : ''}` : st.needLogin ? '로그인 필요 (1시간마다)' : st.error ? esc(st.error) : '켜짐'}</dd>
+            <dt>마지막 동기화</dt><dd>${st.lastAt ? fmtTime(st.lastAt) : '아직 없음'}</dd></dl>
+          <div class="btn-col">
+            <button type="button" class="btn btn-primary" data-act="sync-now" ${st.busy ? 'disabled' : ''}>지금 동기화</button>
+            <button type="button" class="btn btn-danger-ghost" data-act="sync-off">이 기기 연결 끊기</button>
+          </div>`;
+
     box.innerHTML = `
+      <section class="set-group">
+        <h3>기기 동기화 (구글 드라이브)</h3>
+        ${syncHTML}
+      </section>
       <section class="set-group">
         <h3>백업</h3>
         <p class="set-note">데이터는 이 기기의 브라우저 안에만 있어요. 브라우저 데이터를 지우거나 기기를 바꾸면 사라지니 가끔 백업 파일을 저장해 두세요.</p>
@@ -68,6 +88,16 @@ export async function openSettings() {
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const act = b.dataset.act;
+    if (act === 'sync-on' || act === 'sync-now') {
+      try {
+        const ok = act === 'sync-on' ? await SY.connect() : SY.status.needLogin ? await SY.loginAndSync() : await SY.syncNow();
+        toast(ok ? '동기화했어요' : SY.status.error || '동기화하지 못했어요');
+      } catch (err) { toast(err.message || '연결하지 못했어요'); }
+      render();
+    }
+    if (act === 'sync-off') {
+      if (await confirmSheet('이 기기의 동기화를 끌까요? 데이터는 이 기기와 드라이브에 그대로 남아요.', { ok: '끄기' })) { SY.disconnect(); render(); }
+    }
     if (act === 'export') { await exportToFile(); toast('백업 파일을 저장했어요'); render(); }
     if (act === 'share') { if (await exportToShare()) render(); }
     if (act === 'import') box.querySelector('[data-file]').click();

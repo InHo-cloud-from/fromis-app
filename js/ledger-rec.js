@@ -37,7 +37,7 @@ function txFromRule(r, ym) {
   const memo = r.kind === 'install' ? `할부 ${n}/${r.months}${r.memo ? ' · ' + r.memo : ''}`
     : r.kind === 'saving' ? `${n}회차${r.months ? '/' + r.months : ''}${r.memo ? ' · ' + r.memo : ''}` : (r.memo || '');
   return {
-    id: uid(), type: 'expense', date: dueDate(r, ym), amount: r.amount,
+    id: `rec-${r.id}-${ym}`, type: 'expense', date: dueDate(r, ym), amount: r.amount, // 기기마다 같은 번호 → 동기화해도 중복 안 생김
     cat: r.kind === 'saving' ? 'c-saving' : r.cat, sub: r.cat === FANDOM ? r.sub || null : null, member: r.cat === FANDOM ? r.member || null : null,
     place: r.name, pay: r.pay || null, memo, rec: { id: r.id, ym }, createdAt: Date.now(), updatedAt: Date.now(),
   };
@@ -54,7 +54,15 @@ async function doRun() {
   if (!rules.length) return 0;
   const t = today();
   const cur = t.slice(0, 7);
-  const have = new Set((await DB.all('tx')).filter((x) => x.rec?.id).map((x) => `${x.rec.id}|${x.rec.ym}`));
+  const recTx = (await DB.all('tx')).filter((x) => x.rec?.id);
+  // 같은 규칙·같은 달 내역이 두 개 이상이면 (동기화 전 두 기기에서 따로 만든 경우) 하나만 남김
+  const seen = new Map();
+  for (const x of recTx.sort((a, b) => (b.id.startsWith('rec-') ? 1 : 0) - (a.id.startsWith('rec-') ? 1 : 0))) {
+    const k = `${x.rec.id}|${x.rec.ym}`;
+    const skipped = (rules.find((r) => r.id === x.rec.id)?.skip || []).includes(x.rec.ym); // 다른 기기에서 지운 달
+    if (seen.has(k) || skipped) await DB.del('tx', x.id); else seen.set(k, x);
+  }
+  const have = new Set(seen.keys());
   let added = 0;
   for (const r of rules) {
     if (r.paused) continue;
