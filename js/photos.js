@@ -129,3 +129,18 @@ export async function pickBanner() {
 }
 export function resetBannerPick() { picked = null; }
 export const isWide = (p) => !!(p?.w && p?.h && p.w > p.h * 1.1);
+
+// 직관 기록 사진 (kind 'record'): 긴 변 1600px로 줄여서 저장, id 돌려줌
+export async function addRecordPhoto(file) {
+  const blob = await shrink(file, { max: 1600 });
+  const bmp = await createImageBitmap(blob);
+  const size = { w: bmp.width, h: bmp.height };
+  bmp.close?.();
+  const id = uid();
+  await DB.put('photos', { id, kind: 'record', member: null, blob, createdAt: Date.now(), ...size });
+  return id;
+}
+export async function photosByIds(ids = []) {
+  const got = await Promise.all(ids.map((id) => DB.get('photos', id)));
+  return got.filter(Boolean);
+}

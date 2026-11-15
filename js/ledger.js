@@ -10,6 +10,7 @@ import { avatarHTML, openBannerManager } from './decor-settings.js';
 import * as R from './ledger-rec.js';
 import { manageHTML, recSummaryHTML, openRuleForm, openPayslipForm } from './ledger-manage.js';
 import * as F from './ledger-fandom.js';
+import * as S from './schedule-data.js';
 
 let mphotos = {}; // 멤버 프로필 사진 (render 때 갱신)
 
@@ -42,11 +43,11 @@ export function unmount() {
 async function load() {
   await R.runRules(); // 정한 날 지난 고정지출·할부·적금을 내역으로
   const [allTx, rules, payslips, applies, wishes] = await Promise.all([DB.all('tx'), R.getRules(), R.getPayslips(), F.getApplies(), F.getWishes()]);
-  const [txs, cats, subs, pays, kinds, bstore, banner, mphotos, layout, fit] = await Promise.all([
+  const [txs, cats, subs, pays, kinds, bstore, banner, mphotos, layout, fit, dday] = await Promise.all([
     L.txOfMonth(state.ym), L.getList('cats'), L.getList('subs'), L.getList('pays'), L.getList('incomeKinds'), L.getBudgetStore(),
-    P.pickBanner(), P.memberPhotos(), P.getLayout(), P.getFit(),
+    P.pickBanner(), P.memberPhotos(), P.getLayout(), P.getFit(), S.nextDday(),
   ]);
-  return { txs, allTx, rules, payslips, applies, wishes, cats, subs, pays, kinds, banner, mphotos, layout, fit, budget: L.budgetFor(bstore, state.ym) };
+  return { txs, allTx, rules, payslips, applies, wishes, dday, cats, subs, pays, kinds, banner, mphotos, layout, fit, budget: L.budgetFor(bstore, state.ym) };
 }
 
 // 상단: 배너 사진이 있으면 사진 위에 이번 달 남은 예산, 없으면 기본 제목
@@ -114,7 +115,7 @@ function headHTML(d) {
       <b class="lock-num">${big}</b>
       <p class="hero-label">${label}</p>
     </div>
-    <div class="lock-bottom">${bdTag}${sub ? `<p>${sub}</p>` : ''}<span class="lock-more" aria-hidden="true">${icon('chevron', 'down')}</span></div>
+    <div class="lock-bottom">${bdTag}${d.dday ? `<button type="button" class="lock-dday" data-act="gotoschedule"><b>${S.dText(d.dday.d)}</b> ${esc(d.dday.title)}</button>` : ''}${sub ? `<p>${sub}</p>` : ''}<span class="lock-more" aria-hidden="true">${icon('chevron', 'down')}</span></div>
   </header>`;
 }
 
@@ -371,6 +372,7 @@ async function onClick(e) {
   if (act === 'settings') openSettings();
   if (act === 'banner') openBannerManager();
   if (act === 'nextphoto') { await P.nextBanner(); render(); }
+  if (act === 'gotoschedule') window.dispatchEvent(new CustomEvent('goto-tab', { detail: 'schedule' }));
   if (act === 'budget') openBudgetEditor(state.ym);
   if (act === 'add') openTxForm(null);
 }

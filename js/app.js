@@ -1,10 +1,12 @@
 import { icon, esc } from './ui.js';
 import * as Ledger from './ledger.js';
+import * as Schedule from './schedule.js';
+import * as Record from './record.js';
 
 const TABS = [
   { id: 'ledger', label: '가계부', icon: 'wallet', mod: Ledger },
-  { id: 'schedule', label: '일정', icon: 'calendar' },
-  { id: 'record', label: '기록', icon: 'book' },
+  { id: 'schedule', label: '일정', icon: 'calendar', mod: Schedule },
+  { id: 'record', label: '기록', icon: 'book', mod: Record },
 ];
 
 const view = document.getElementById('view');
@@ -41,6 +43,12 @@ function show(id) {
 let start = TABS[0].id;
 try { start = localStorage.getItem('tab') || TABS[0].id; } catch { /* 무시 */ }
 show(start);
+
+// 다른 탭에서 이동 (예: 가계부 잠금화면의 D-day → 일정)
+window.addEventListener('goto-tab', (e) => show(e.detail));
+
+// PC 월페이퍼 폴더가 연결돼 있으면 일정이 바뀔 때마다 월페이퍼용 파일을 새로 씀
+import('./wallpaper-link.js').then((m) => m.autoSync()).catch(() => {});
 
 // PC 미리보기(Live Server 등)에서는 오프라인 캐시를 끔 → 수정한 내용이 바로 보이게
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);

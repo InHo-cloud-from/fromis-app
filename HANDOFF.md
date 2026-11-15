@@ -74,7 +74,7 @@
 ## 현재 상태
 - **포카 탭은 빼기로 함 (2026-11-15)**: 사용자는 포카 사진을 직접 찍기 싫고, 공식 이미지를 자동으로 넣는 건 불가(포카마켓 API 없음, 저작권 이미지를 공개 저장소에 배포 불가). 하단 탭·SW 캐시에서 제거. poca.js / trade.js 파일은 아직 남아 있음(로드 안 됨). 설정(백업)은 원래 포카 탭 헤더에 있었으므로 다른 탭에 다시 붙여야 함
 - (이전) 포카 탭 1차 완성 (헤드리스 크롬으로 추가/수정/교환 이미지/백업/사진 동작 확인)
-- 가계부·기록 탭은 "준비 중" 화면만 있음
+- 가계부·일정·기록 탭 모두 1차 완성 (2026-11-15)
 - git init 만 함 (커밋 없음)
 
 ## 파일 구조
@@ -92,7 +92,10 @@ js/ledger.js          가계부 탭: 월 이동, 요약/내역, 전체/덕질만
 js/ledger-data.js     가계부 기본 분류·결제수단·수입 구분, 예산 저장 형식, 월 합계 계산
 js/ledger-settings.js 목록 관리(분류·덕질 항목·결제수단·수입 구분), 예산 편집(매달 기본 / 이번 달만)
 _test.html            (git 제외) 샘플 데이터 넣고 화면 확인용. ?seed&view=list&scope=fandom
-js/backup.js          전체 store를 JSON 하나로 내보내기/불러오기 (사진은 dataURL)
+js/backup.js          전체 store를 JSON 하나로 내보내기/불러오기 (사진은 dataURL, 월페이퍼 폴더 연결은 제외)
+js/schedule.js / schedule-data.js  일정 탭
+js/wallpaper-link.js  PC 월페이퍼(fromis9-wallpaper) 폴더에 app-schedule.js 자동 저장
+js/record.js / record-data.js / albums-data.js  기록 탭 (직관·앨범 감상·연말 결산)
 icons/                앱 아이콘 192/512/maskable
 serve.ps1             PC 미리보기 서버 (.\serve.ps1 → http://localhost:8080). 사용자는 VS Code Live Server로 봄 (localhost/127.0.0.1에서는 서비스워커 꺼짐)
 reference/            월페이퍼 원본 (~450MB) — .gitignore로 제외, 공개 저장소에 올리면 안 됨
@@ -115,7 +118,29 @@ reference/            월페이퍼 원본 (~450MB) — .gitignore로 제외, 공
      - 응모 마감·위시 마감은 일정 탭 만들 때 D-day로 연결하면 좋음
    - 2단계: 고정지출 자동 입력, 할부, 적금 트래커, 월급명세서
    - 3단계: 응모 기록, 구매 예정
-3. 일정 탭 (기념일 자동 + D-day) ← 가계부 3단계 끝나면 다음
-4. 기록 탭
+3. **일정 탭 1차 완료 (2026-11-15, 사용자 확인 대기)**: js/schedule.js, js/schedule-data.js
+   - 맨 위 가장 가까운 D-day(납부일 제외, 배너 사진 흐리게 배경) + 달력(점: 내 일정·기념일·마감·납부, 생일엔 멤버 프로필) + 선택한 날 + 다가오는 30일
+   - 내 일정: meta schedule.events {title,date,time,yearly,memo} — 종류 구분 없이 달력처럼 (사용자 요청)
+   - 자동: 기념일(N번째 생일·N주년), 응모 마감(결과 대기만), 고정지출·할부 납부일. 위시 마감은 사용자가 안 고름
+   - 가계부 잠금화면에 가장 가까운 D-day 칩 → 누르면 일정 탭 (window goto-tab 이벤트)
+   - **PC 월페이퍼 연동 (2026-11-15, 사용자 확인 대기)**: js/wallpaper-link.js
+     - 사용자의 바탕화면 `fromis9-wallpaper`(Wallpaper Engine 웹 월페이퍼, 별도 저장소 InHo-cloud-from/fromis9-wallpaper) 달력에 앱 일정 띄우기
+     - 방식: PC 크롬 File System Access API. 설정 → 'PC 월페이퍼'에서 폴더를 한 번 고르면 handle을 meta wallpaper.dir에 저장, data-changed 때마다 `app-schedule.js`(window.APP_SCHEDULE / APP_ANNIVERSARIES) 덮어씀. 크롬 재시작 후 허락이 풀리면 일정 탭 위에 '다시 연결' 알림
+     - 보낼 종류: 내 일정/응모 마감/납부일 스위치 (meta wallpaper.kinds). **사용자는 '응모 마감'만 골랐음 → 기본값 응모 마감만** (내 일정을 안 고른 게 의도인지 확인 필요)
+     - wallpaper.dir·syncedAt 은 백업에서 빠지고, 불러오기 때도 유지 (LOCAL_KEYS)
+     - 월페이퍼 쪽 수정: index.html 에 app-schedule.js 로드 + 5분마다 reloadAppSchedule(), .gitignore 에 app-schedule.js, CLAUDE.md 기록. 백업 index.before-applink.backup.html. 월페이퍼 저장소는 아직 커밋 안 함
+     - 폰 일정은 드라이브 동기화 후에야 PC로 넘어감
+4. **기록 탭 1차 완료 (2026-11-15, 사용자 확인 대기)**: js/record.js, js/record-data.js, js/albums-data.js
+   - 사용자 선택: 직관 + 앨범·노래 감상 / 직관 칸: 가계부 지출 연결, 세트리스트, 일정에서 자동 생성 / 감상: 앨범 목록 미리 넣기, 곡별 별점·한줄평, 최애곡, 앨범 별점+감상평 / 연말 결산: 한 화면 요약 카드
+   - 직관: meta record.shows. 사진은 photos store kind 'record' (긴 변 1600). 지출 연결 = 공연 45일 전~7일 뒤 덕질 지출 체크. 세트리스트는 줄글 + '앨범 곡에서 고르기'
+   - '지난 일정, 기록 남길까요?': 지난 60일 내 일정(매년 반복 제외) 중 기록 안 한 것, x로 닫으면 record.dismissed. 제목으로 종류 추측
+   - 앨범: albums-data.js (위키백과 en/ko 기준 국내 발매 16개, 2026-07-21 Glow Me까지. 일본 발매·OST 제외). 사용자가 '앨범 추가'로 직접 추가(record.customAlbums, id c-)
+   - **OST (사용자 기준): 5인 체제(2025~) 이후 발매 또는 현 5인(하영·지원·채영·나경·지헌)만 참여한 곡**. 9곡: 하영 Fall in Love(하나뿐인 내편), 지원·나경 지금부터 시작해(초면에 사랑합니다), 지원 Cloud(라켓소년단), 지원 내 곁을 떠나지 말아요(유세풍2), 하영·나경 봄처럼 다가와(취하는 로맨스), 단체 Touchdown(트라이), 하영 기억앨범(언더커버 미쓰홍), 단체 Swipe It Out(월간남친), 지원 Here I Am(신이랑 법률사무소). Stay Alive·Love Me Back·싸이월드 별은 다른 멤버 참여라 제외. 크레딧은 애플 뮤직(솔로·유닛)·나무위키 가사 표기(단체)
+   - **커버**: 애플 뮤직 이미지 주소(art 필드)만 저장, 이미지 파일은 저장소에 안 넣음. sw.js 가 mzstatic 이미지를 fromis-covers 캐시에 보관(버전 올려도 유지). 못 불러오면 색 타일+제목. 앨범 목록에 전체/앨범/OST 필터
+   - **사용자 추가 요청 반영**: Love Me Back(작전명 순정 OST, 8인 참여지만 넣어 달라고 함), 달빛바다(Sea of Moonlight, 2022 여름방학 프로젝트, 디지털 싱글로), 멤버 개인곡 type solo 5곡(하영 still love me?·Stay together all day·처음 그 자리에(Where We Began, 풀하우스 OST 리메이크 2026-10-21), 지원 Talk to Me, 딘딘&하영 Sleepless). 필터: 전체/앨범/OST/개인곡. 총 32개, 커버 주소 32개 모두 응답 확인
+   - still love me? 날짜: 애플 뮤직 앨범 정보는 2022-03-24, 곡 정보는 2020-03-24로 서로 다름 → 2022-03-24로 넣음 (확인 필요)
+   - 감상: meta record.albums {rating, review, updatedAt, tracks:{번호:{rating,note,fav,favAt}}}
+   - 결산: 연도 선택, 직관 횟수·종류, 덕질 지출(가계부), 직관 연결 지출, 최고 별점 직관, 멤버별·항목별, 올해 최애곡(favAt 기준), 별점 매긴 앨범(updatedAt 기준), 직관 사진 최대 6장
+   - 아직: 결산 카드를 이미지로 저장 (사용자에게 제안했던 기능, 다음에)
 5. 구글 드라이브 동기화 (사용자와 OAuth 설정)
 6. 탭 간 연결

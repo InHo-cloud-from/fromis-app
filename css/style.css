@@ -262,6 +262,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
   border: 0; border-bottom: 1px solid var(--line); background: none; padding: 14px 2px; font-size: 15px; font-weight: 600;
 }
 .set-row span, .mr-main { flex: 1; min-width: 0; }
+.set-row-sub { display: block; font-size: 12.5px; font-weight: 500; color: var(--ink-2); margin-top: 2px; }
 .set-row .ic, .manage-row .ic { color: var(--ink-2); width: 18px; height: 18px; }
 .manage-list { list-style: none; margin: 0; padding: 0; }
 .mr-main { display: flex; flex-direction: column; }
@@ -424,6 +425,56 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .wish-done button { width: 100%; display: flex; justify-content: space-between; border: 0; background: none; padding: 6px 0; color: var(--ink-2); text-decoration: line-through; }
 .wish-done small { text-decoration: none; }
 
+/* ---------- 일정 ---------- */
+.dday-card { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--accent-soft); margin-bottom: 14px; }
+.dday-card.has-photo { color: #fff; }
+.dday-card.has-photo::after { content: ""; position: absolute; inset: 0; background: rgba(20, 14, 16, .28); }
+.dday-inner { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; padding: 20px; }
+.dday-num { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1; flex: none; font-variant-numeric: tabular-nums; color: var(--accent-strong); }
+.dday-card.has-photo .dday-num { color: #fff; }
+.dday-text { min-width: 0; }
+.dday-text p { margin: 0; font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
+.dday-text small { font-size: 13px; opacity: .85; }
+.dday-card.has-photo .dday-text { text-shadow: 0 1px 6px rgba(0, 0, 0, .35); }
+
+.schedule-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.schedule-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.cal-panel .month-nav { margin-bottom: 10px; }
+.cal-head, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; }
+.cal-head span { font-size: 12px; font-weight: 700; color: var(--ink-2); padding-bottom: 6px; }
+.cal-head .sun, .cal-cell.sun .cal-num { color: var(--danger); }
+.cal-grid { row-gap: 2px; }
+.cal-cell { border: 0; background: none; padding: 4px 0 2px; min-height: 50px; display: flex; flex-direction: column; align-items: center; gap: 3px; border-radius: 10px; }
+.cal-cell.blank { pointer-events: none; }
+.cal-num { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 14.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal-cell.today .cal-num { color: var(--accent-strong); font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--accent-strong); }
+.cal-cell.sel .cal-num { background: var(--ink); color: var(--bg); box-shadow: none; }
+.cal-cell.sel.sun .cal-num { color: var(--bg); }
+.cal-marks { display: flex; gap: 3px; align-items: center; min-height: 14px; }
+.avatar.xs { width: 14px; height: 14px; font-size: 7px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; flex: none; display: inline-block; }
+.d-mine { background: var(--denim); }
+.d-anniv { background: var(--accent-strong); }
+.d-apply, .d-pay { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+.cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-2); }
+.cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+.ev-list { list-style: none; margin: 0; padding: 0; }
+.ev-list li + li { border-top: 1px solid var(--line); }
+.ev-row { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 10px 0; text-align: left; }
+.ev-d { flex: none; min-width: 3.4em; font-weight: 800; font-size: 14px; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+.ev-time { flex: none; min-width: 3em; font-size: 13px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ev-time:empty { min-width: 0; }
+.ev-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ev-main b { font-weight: 700; }
+.ev-main small { font-size: 12.5px; color: var(--ink-2); }
+.ev-row.src-pay { opacity: .72; }
+.ev-row.src-pay .ev-d { color: var(--ink-2); }
+
+.lock-dday { pointer-events: auto; display: inline-flex; gap: 6px; align-items: center; margin-bottom: 8px; padding: 6px 13px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .2); backdrop-filter: blur(8px); color: #fff; font-size: 13.5px; font-weight: 600; text-shadow: none; max-width: 100%; }
+.lock-dday b { font-weight: 800; }
+.lock-bottom .hero-bd { display: table; margin: 0 auto 8px; }
+
 /* ---------- 꾸미기: 배너 · 프로필 ---------- */
 .head-actions { display: flex; align-items: center; gap: 2px; }
 .hero {
@@ -506,6 +557,8 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 @media (min-width: 720px) {
   .ledger-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ledger-grid .span-2 { grid-column: 1 / -1; }
+  .schedule-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
+  .cal-cell { min-height: 62px; }
   .ledger-bar { flex-direction: row; align-items: center; justify-content: space-between; }
   .stat b { font-size: 20px; }
 }
@@ -554,3 +607,158 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; }
 }
+
+/* ---------- PC 월페이퍼 연동 알림 ---------- */
+.wl-notice {
+  display: block; width: 100%; margin: 0 0 12px; padding: 10px 14px; text-align: left;
+  border: 1px dashed var(--accent); border-radius: 12px; background: var(--surface); color: var(--ink-2); font-size: 13.5px;
+}
+.wl-notice b { color: var(--accent-strong); }
+
+/* ---------- 기록 탭 ---------- */
+.rec-seg { margin: 0 0 14px; }
+.stars { display: inline-flex; gap: 1px; color: var(--line); vertical-align: middle; }
+.stars .ic { width: 16px; height: 16px; }
+.stars.sm .ic { width: 13px; height: 13px; }
+.stars i { display: inline-flex; }
+.stars i.on { color: var(--accent-strong); }
+.stars i.on .ic, .stars-in [aria-pressed="true"] .ic { fill: currentColor; }
+.stars-in { display: flex; gap: 2px; }
+.stars-in button { border: 0; background: none; padding: 4px; color: var(--line); border-radius: 8px; }
+.stars-in button .ic { width: 26px; height: 26px; }
+.stars-in button[aria-pressed="true"] { color: var(--accent-strong); }
+
+.rec-sug { margin-bottom: 14px; border-color: var(--accent); }
+.sug-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.rec-year { margin-bottom: 18px; }
+.rec-year-h { font-size: 15px; font-weight: 800; margin: 4px 2px 8px; }
+.rec-year-h small { font-size: 12.5px; color: var(--ink-2); font-weight: 600; margin-left: 4px; }
+.show-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.show-card {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px;
+}
+.show-date { flex: none; width: 46px; display: flex; flex-direction: column; align-items: center; border-right: 1px solid var(--line); padding-right: 10px; }
+.show-date b { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.show-date small { font-size: 12px; color: var(--ink-2); }
+.show-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.show-main b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.show-main small { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.show-thumb { flex: none; width: 56px; height: 56px; border-radius: 10px; background: var(--surface-2) center/cover; }
+
+.photo-strip { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 14px; scroll-snap-type: x mandatory; }
+.ps-item { flex: none; scroll-snap-align: start; }
+.ps-item img { display: block; height: 220px; max-width: 80vw; object-fit: contain; border-radius: 12px; background: var(--surface-2); }
+.sub-h { font-size: 14px; font-weight: 800; margin: 16px 0 8px; }
+.sub-h small { font-weight: 600; color: var(--ink-2); margin-left: 4px; }
+.review-text { white-space: pre-wrap; margin: 0; line-height: 1.6; }
+.setlist { margin: 0; padding-left: 1.6em; line-height: 1.8; }
+.link-tx { list-style: none; margin: 0; padding: 0; }
+.link-tx li, .link-tx label { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 14px; }
+.link-tx.pick li { padding: 0; }
+.link-tx li + li { border-top: 1px solid var(--line); }
+.link-tx span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.link-tx span small { font-size: 12px; color: var(--ink-2); margin: 0; }
+.link-tx b { font-variant-numeric: tabular-nums; }
+.link-tx input { width: 18px; height: 18px; accent-color: var(--accent-strong); }
+
+.photo-edit { display: flex; flex-wrap: wrap; gap: 8px; }
+.pe-item { position: relative; width: 76px; height: 76px; border-radius: 10px; background: var(--surface-2) center/cover; }
+.pe-x { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); display: grid; place-items: center; padding: 0; }
+.pe-x .ic { width: 14px; height: 14px; }
+.pe-add { width: 76px; height: 76px; border-radius: 10px; border: 1.5px dashed var(--line); background: none; color: var(--ink-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.pe-add small { font-size: 11.5px; }
+
+.song-pick details { border-bottom: 1px solid var(--line); padding: 10px 0; }
+.song-pick summary { cursor: pointer; display: flex; align-items: baseline; gap: 8px; list-style: none; }
+.song-pick summary::-webkit-details-marker { display: none; }
+.song-pick summary small { color: var(--ink-2); font-size: 12px; }
+.song-pick .chips { margin-top: 10px; }
+
+.fav-panel { margin-bottom: 14px; }
+.fav-panel h3 .ic { width: 16px; height: 16px; color: var(--accent-strong); fill: currentColor; vertical-align: -2px; }
+.album-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.album-card { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left; border: 0; background: none; padding: 0; color: inherit; }
+.album-cover {
+  aspect-ratio: 1; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; justify-content: flex-end;
+  box-shadow: var(--shadow); color: #2B2527;
+}
+.album-cover.ph-0 { background: var(--ph-0); }
+.album-cover.ph-1 { background: var(--ph-1); }
+.album-cover.ph-2 { background: var(--ph-2); }
+.album-cover.ph-3 { background: var(--ph-3); }
+.album-cover.ph-4 { background: var(--ph-4); }
+.album-cover b { font-size: 17px; font-weight: 800; line-height: 1.2; word-break: keep-all; }
+.album-cover small { font-size: 12px; opacity: .75; }
+.album-meta { display: flex; flex-direction: column; gap: 2px; padding: 0 2px; }
+.album-meta small { font-size: 12px; color: var(--ink-2); }
+.album-meta .muted { opacity: .7; }
+.album-meta .fav-n { color: var(--accent-strong); font-weight: 700; }
+.fav-n .ic { width: 12px; height: 12px; fill: currentColor; vertical-align: -1px; }
+.album-add { aspect-ratio: 1; height: auto; border: 1.5px dashed var(--line); border-radius: 12px; align-items: center; justify-content: center; color: var(--ink-2); text-align: center; }
+.album-add span { display: flex; flex-direction: column; font-weight: 700; }
+.album-add small { font-weight: 500; font-size: 12px; }
+
+.album-sheet .field { margin-bottom: 12px; }
+.track-list { list-style: none; margin: 0; padding: 0; }
+.track { padding: 10px 0; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.track-top { display: flex; align-items: center; gap: 10px; }
+.track-no { width: 20px; text-align: right; color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.track-name { flex: 1; min-width: 0; font-weight: 700; }
+.lead { font-style: normal; font-size: 11px; font-weight: 700; color: var(--accent-strong); background: var(--accent-soft); border-radius: 6px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+.fav-btn { border: 0; background: none; padding: 6px; color: var(--line); border-radius: 50%; }
+.fav-btn .ic { width: 22px; height: 22px; }
+.fav-btn[aria-pressed="true"] { color: var(--accent-strong); }
+.fav-btn[aria-pressed="true"] .ic { fill: currentColor; }
+.track .stars-in { margin-left: 26px; }
+.track .stars-in button .ic { width: 20px; height: 20px; }
+.track-note { margin-left: 30px; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 6px 2px; font: inherit; font-size: 14px; color: var(--ink); }
+.track-note:focus { outline: none; border-color: var(--accent-strong); }
+
+.rec-years { margin-bottom: 12px; }
+.recap-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px 20px; box-shadow: var(--shadow); max-width: 560px; }
+.recap-head h2 { margin: 2px 0 14px; font-size: 24px; font-weight: 800; }
+.recap-photos { display: grid; gap: 4px; border-radius: 14px; overflow: hidden; margin-bottom: 16px; grid-template-columns: repeat(3, 1fr); }
+.recap-photos.n1 { grid-template-columns: 1fr; }
+.recap-photos.n2, .recap-photos.n4 { grid-template-columns: 1fr 1fr; }
+.recap-photos span { aspect-ratio: 1; background: var(--surface-2) center/cover; }
+.recap-photos.n1 span { aspect-ratio: 4 / 3; }
+.recap-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+.recap-stats > div { background: var(--accent-soft); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.recap-stats span { font-size: 12.5px; color: var(--ink-2); font-weight: 700; }
+.recap-stats b { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; word-break: keep-all; }
+.recap-stats b small { font-size: 14px; margin-left: 2px; }
+.recap-stats > div > small { font-size: 12px; color: var(--ink-2); }
+.recap-sec { margin-top: 18px; }
+.recap-sec h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--accent-strong); letter-spacing: .04em; }
+.recap-best { width: 100%; text-align: left; border: 1px solid var(--line); background: none; color: inherit; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.recap-best small { font-size: 12.5px; color: var(--ink-2); }
+.recap-rank { margin: 0; padding-left: 1.4em; }
+.recap-rank li { padding: 5px 0; }
+.recap-rank li::after { content: ""; display: table; clear: both; }
+.recap-rank > li > span:first-child { display: inline-flex; flex-direction: column; min-width: 0; margin-right: 8px; vertical-align: middle; }
+.recap-rank > li > span:first-child small { font-size: 12px; color: var(--ink-2); }
+.recap-rank b, .recap-rank .stars { float: right; font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+@media (min-width: 960px) {
+  .show-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .album-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .ps-item img { height: 320px; max-width: 520px; }
+}
+.link-tx label { width: 100%; cursor: pointer; }
+.album-sheet > .hint { margin-bottom: 12px; }
+.track-list input.track-note { width: calc(100% - 30px); box-sizing: border-box; margin-left: 30px; padding: 8px 12px; font-size: 14px; }
+@media (min-width: 960px) { .album-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+
+/* ---------- 앨범 커버 ---------- */
+.album-cover { position: relative; overflow: hidden; }
+.album-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.album-cover.has-art > b, .album-cover.has-art > small { visibility: hidden; }
+.album-title { font-size: 14px; font-weight: 700; line-height: 1.3; word-break: keep-all; }
+.album-filter { margin-bottom: 12px; }
+.album-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.album-hero .album-cover { width: 112px; flex: none; padding: 8px; }
+.album-hero .album-cover b { font-size: 13px; }
+.album-hero > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.album-hero > div > b { font-size: 18px; font-weight: 800; line-height: 1.25; }
+.album-hero > div > small { font-size: 12.5px; color: var(--ink-2); }
