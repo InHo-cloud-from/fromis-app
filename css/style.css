@@ -762,3 +762,8 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .album-hero > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .album-hero > div > b { font-size: 18px; font-weight: 800; line-height: 1.25; }
 .album-hero > div > small { font-size: 12.5px; color: var(--ink-2); }
+
+/* ---------- 월급날 기준 한 달 ---------- */
+.month-nav h2 .period { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-top: 1px; }
+.set-select { cursor: default; }
+.set-row.set-select select { width: auto; flex: none; padding: 8px 10px; font-size: 14px; border-radius: 10px; }

@@ -1,6 +1,7 @@
 import { DB } from './db.js';
 import { openSheet, confirmSheet, toast, icon, esc, canShareFiles, today } from './ui.js';
 import { notifyChange } from './data.js';
+import { periodOf, loadStartDay, setStartDay } from './ledger-data.js';
 import { openListManager, openBudgetEditor } from './ledger-settings.js';
 import { openBannerManager, openMemberPhotoManager } from './decor-settings.js';
 import { exportToFile, exportToShare, importFromFile } from './backup.js';
@@ -19,6 +20,7 @@ export async function openSettings() {
 
   async function render() {
     const last = await DB.getMeta('lastBackup');
+    const startDayNow = await loadStartDay();
     let storage = '';
     try {
       const est = await navigator.storage.estimate();
@@ -45,6 +47,8 @@ export async function openSettings() {
       </section>
       <section class="set-group">
         <h3>가계부</h3>
+        <label class="set-row set-select"><span>한 달 시작일<small class="set-row-sub">월급날로 맞추면 그날부터 다음 달 전날까지가 한 달이에요</small></span>
+          <select data-startday aria-label="한 달 시작일">${Array.from({ length: 28 }, (_, i) => i + 1).map((n) => `<option value="${n}"${n === startDayNow ? " selected" : ""}>${n === 1 ? "1일 (달력대로)" : `매달 ${n}일`}</option>`).join("")}</select></label>
         <button type="button" class="set-row" data-act="budget"><span>예산</span>${icon('chevron')}</button>
         <button type="button" class="set-row" data-list="cats"><span>지출 분류</span>${icon('chevron')}</button>
         <button type="button" class="set-row" data-list="subs"><span>덕질 항목</span>${icon('chevron')}</button>
@@ -67,13 +71,19 @@ export async function openSettings() {
     if (act === 'export') { await exportToFile(); toast('백업 파일을 저장했어요'); render(); }
     if (act === 'share') { if (await exportToShare()) render(); }
     if (act === 'import') box.querySelector('[data-file]').click();
-    if (act === 'budget') openBudgetEditor(today().slice(0, 7));
+    if (act === 'budget') { await loadStartDay(); openBudgetEditor(periodOf(today())); }
     if (act === 'banners') openBannerManager();
     if (act === 'members') openMemberPhotoManager();
     if (act === 'wallpaper') openWallpaperLink(render);
   });
 
   box.addEventListener('change', async (e) => {
+    if (e.target.matches('[data-startday]')) {
+      await setStartDay(e.target.value);
+      notifyChange();
+      toast(Number(e.target.value) === 1 ? '달력대로 1일부터 한 달이에요' : `매달 ${e.target.value}일부터 한 달로 계산해요`);
+      return;
+    }
     if (!e.target.matches('[data-file]')) return;
     const file = e.target.files[0];
     e.target.value = '';

@@ -17,7 +17,7 @@ let mphotos = {}; // 멤버 프로필 사진 (render 때 갱신)
 const TYPES = { expense: '지출', income: '수입', cardpay: '카드값 납부' };
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 
-const state = { ym: today().slice(0, 7), view: 'summary', scope: 'all' };
+const state = { ym: today().slice(0, 7), auto: true, view: 'summary', scope: 'all' }; // auto = '이번 달'을 보는 중 (월급날 기준으로 맞춤)
 try {
   const v = localStorage.getItem('ledger.view'); if (v) state.view = v;
   const s = localStorage.getItem('ledger.scope'); if (s) state.scope = s;
@@ -42,6 +42,8 @@ export function unmount() {
 
 async function load() {
   await R.runRules(); // 정한 날 지난 고정지출·할부·적금을 내역으로
+  await L.loadStartDay();
+  if (state.auto) state.ym = L.periodOf(today());
   const [allTx, rules, payslips, applies, wishes] = await Promise.all([DB.all('tx'), R.getRules(), R.getPayslips(), F.getApplies(), F.getWishes()]);
   const [txs, cats, subs, pays, kinds, bstore, banner, mphotos, layout, fit, dday] = await Promise.all([
     L.txOfMonth(state.ym), L.getList('cats'), L.getList('subs'), L.getList('pays'), L.getList('incomeKinds'), L.getBudgetStore(),
@@ -125,14 +127,15 @@ async function render() {
   if (!box) return;
   mphotos = d.mphotos;
   box.className = `ledger layout-${d.banner ? d.layout : 'plain'}${P.isWide(d.banner) ? ' photo-wide' : ''}`;
-  const isThisMonth = state.ym === today().slice(0, 7);
+  const isThisMonth = state.ym === L.periodOf(today());
+  const range = L.periodText(state.ym);
   fixView();
   box.innerHTML = `
     ${headHTML(d)}
     <div class="ledger-bar">
       <div class="month-nav">
         <button type="button" class="icon-btn sm" data-act="prev" aria-label="이전 달">${icon('chevron', 'flip')}</button>
-        <h2>${L.ymLabel(state.ym)}</h2>
+        <h2>${L.ymLabel(state.ym)}${range ? `<small class="period">${range}</small>` : ""}</h2>
         <button type="button" class="icon-btn sm" data-act="next" aria-label="다음 달">${icon('chevron')}</button>
         ${isThisMonth ? '' : '<button type="button" class="btn-link" data-act="thismonth">이번 달</button>'}
       </div>
@@ -366,9 +369,9 @@ async function onClick(e) {
   const a = e.target.closest('[data-act]');
   if (!a) return;
   const act = a.dataset.act;
-  if (act === 'prev') { state.ym = L.shiftYM(state.ym, -1); render(); }
-  if (act === 'next') { state.ym = L.shiftYM(state.ym, 1); render(); }
-  if (act === 'thismonth') { state.ym = today().slice(0, 7); render(); }
+  if (act === 'prev') { state.ym = L.shiftYM(state.ym, -1); state.auto = false; render(); }
+  if (act === 'next') { state.ym = L.shiftYM(state.ym, 1); state.auto = false; render(); }
+  if (act === 'thismonth') { state.auto = true; render(); }
   if (act === 'settings') openSettings();
   if (act === 'banner') openBannerManager();
   if (act === 'nextphoto') { await P.nextBanner(); render(); }
@@ -381,7 +384,8 @@ async function onClick(e) {
 function defaultDate() {
   // 보고 있는 달이 이번 달이 아니면 그 달 1일로
   const t = today();
-  return t.startsWith(state.ym) ? t : `${state.ym}-01`;
+  const { from, to } = L.periodRange(state.ym);
+  return t >= from && t <= to ? t : from;
 }
 const lastPay = () => { try { return localStorage.getItem('ledger.lastPay'); } catch { return null; } };
 
@@ -490,7 +494,7 @@ async function openTxForm(tx, opts = {}) {
     if (opts.onSaved) await opts.onSaved(out);
     await s.close();
     toast(opts.onSaved ? '지출에 넣었어요' : isNew ? '저장했어요' : '수정했어요');
-    if (L.ymOf(out.date) !== state.ym) state.ym = L.ymOf(out.date);
+    if (L.periodOf(out.date) !== state.ym) { state.ym = L.periodOf(out.date); state.auto = state.ym === L.periodOf(today()); }
     render();
   });
 

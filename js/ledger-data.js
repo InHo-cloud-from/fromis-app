@@ -67,8 +67,32 @@ export const ymLabel = (ym) => { const [y, m] = ym.split('-'); return `${y}년 $
 export const won = (n) => `${Math.round(n || 0).toLocaleString('ko-KR')}원`;
 export const parseWon = (s) => { const n = Number(String(s).replace(/[^\d]/g, '')); return Number.isFinite(n) ? n : 0; };
 
+/* ---------- 한 달 시작일 (월급날 기준 가계부) ----------
+   meta 'ledger.startDay' (1~28, 기본 1). 시작일이 10이면 '2026-11' = 11월 10일 ~ 12월 9일.
+   그 달 이름은 시작하는 달로 붙여요. 11월 1~9일은 '10월' 기간에 들어가요. */
+let START = 1;
+export async function loadStartDay() { START = Number(await DB.getMeta('ledger.startDay')) || 1; return START; }
+export const startDay = () => START;
+export async function setStartDay(n) { START = Math.min(28, Math.max(1, Number(n) || 1)); await DB.setMeta('ledger.startDay', START); }
+const pad2 = (n) => String(n).padStart(2, '0');
+export const periodOf = (date) => (Number(date.slice(8, 10)) >= START ? date.slice(0, 7) : shiftYM(date.slice(0, 7), -1));
+export function periodRange(ym) {
+  const from = `${ym}-${pad2(START)}`;
+  const end = new Date(`${shiftYM(ym, 1)}-${pad2(START)}T00:00`);
+  end.setDate(end.getDate() - 1);
+  return { from, to: `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}` };
+}
+// '11.10 ~ 12.9' (시작일이 1일이면 빈 글자)
+export function periodText(ym) {
+  if (START === 1) return '';
+  const { from, to } = periodRange(ym);
+  const f = (d) => `${Number(d.slice(5, 7))}.${Number(d.slice(8))}`;
+  return `${f(from)} ~ ${f(to)}`;
+}
+
 export async function txOfMonth(ym) {
-  return (await DB.all('tx')).filter((t) => t.date && t.date.startsWith(ym));
+  const { from, to } = periodRange(ym);
+  return (await DB.all('tx')).filter((t) => t.date && t.date >= from && t.date <= to);
 }
 
 // 한 달 합계 계산 (카드값 납부는 지출에 넣지 않음)
