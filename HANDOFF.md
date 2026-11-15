@@ -143,7 +143,7 @@ reference/            월페이퍼 원본 (~450MB) — .gitignore로 제외, 공
    - 감상: meta record.albums {rating, review, updatedAt, tracks:{번호:{rating,note,fav,favAt}}}
    - 결산: 연도 선택, 직관 횟수·종류, 덕질 지출(가계부), 직관 연결 지출, 최고 별점 직관, 멤버별·항목별, 올해 최애곡(favAt 기준), 별점 매긴 앨범(updatedAt 기준), 직관 사진 최대 6장
    - 아직: 결산 카드를 이미지로 저장 (사용자에게 제안했던 기능, 다음에)
-5. **구글 드라이브 동기화 (2026-11-15 Client ID 받음, 실제 로그인 확인 대기)**: js/sync.js, js/gdrive.js, js/sync-config.js(GOOGLE_CLIENT_ID 넣음 2026-11-15)
+5. **구글 드라이브 동기화 (2026-11-15 사용자 확인 완료: PC 127.0.0.1·폰·PC 깃허브 주소 3곳 연결 성공)**: js/sync.js, js/gdrive.js, js/sync-config.js(GOOGLE_CLIENT_ID 넣음 2026-11-15)
    - 구글 로그인(GIS 토큰, 범위 drive.appdata = 앱 전용 숨김 폴더). 토큰 1시간 → 만료되면 화면 위 '☁ 눌러서 동기화' 버튼(자동 갱신 불가, 서버 없음)
    - 드라이브: state.json(meta·tx·사진 정보·clock) + photo-<id> 파일
    - db.js 가 모든 쓰기에 시각 기록(meta _sync.clock, 음수=삭제). meta 값이 [{id}] 목록이면 항목별 기록 → 두 기기에서 각각 추가한 항목이 합쳐짐. 시각 없는 기존 데이터는 합침(union)
